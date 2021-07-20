@@ -14,6 +14,12 @@ jobs:
   ubuntu_20_04:
     name: "ci ubuntu-20.04"
     runs-on: "ubuntu-20.04"
+    env:
+      RUSTFLAGS: "-Zsanitizer=address "
+      RUSTDOCFLAGS: "-Zsanitizer=address "
+      # Because we don't build GDAL with sanitizers, we need to turn off
+      # leak detection, otherwise it'll report memory leak false positives
+      ASAN_OPTIONS: "detect_leaks=0"
     
     strategy:
       matrix:
@@ -33,6 +39,11 @@ jobs:
         run: |
           export CC="clang-9"
           export CXX="clang++-9"
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          components: "clippy, rustfmt, rust-src"
       - name: Check with Rustfmt
         uses: actions-rs/cargo@v1
         with:
@@ -47,9 +58,9 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: ${{ matrix.features }} --verbose
+          args: ${{ matrix.features }} --verbose --target x86_64-unknown-linux-gnu -Zbuild-std
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: ${{ matrix.features }} --verbose
+          args: ${{ matrix.features }} --verbose --target x86_64-unknown-linux-gnu -Zbuild-std
